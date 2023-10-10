@@ -12,9 +12,9 @@ module.exports = (app) => {
     app.get('/book/:id', bookController.getBook)
     app.get('/authors', authorController.getAllAuthors)
     app.get('/author/:id', authorController.getAuthor)
-    app.post('/author', authorController.createAuthor)
     app.post('/book', bookController.createBook)
-    app.put('/author', authorController.editAuthor)
+    app.post('/author', authorController.createAuthor)
     app.put('/book', bookController.editBook)
+    app.put('/author', authorController.editAuthor)
 }
 

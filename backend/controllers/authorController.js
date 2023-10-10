@@ -2,55 +2,89 @@ const responseCodes = require('http-status-code')
 'use Strict'
 const { response } = require('express');
 const mysql = require('mysql');
-const con = mysql.createConnection({host:process.env.host, user:process.env.user, password:process.env.password, database:process.env.database});
-module.exports = (app) => {
-    async function query(sql) {
-        const connection = await mysql.createConnection({host:process.env.host, user:process.env.user, password:process.env.password, database:process.env.database});
-        
-        await connection.query(sql, function(err,result, fields){
-            if(err) throw err;
-            rows = 'poopk'
-            console.log(result)
-        });
-        return rows;
+
+const pool = mysql.createPool({
+    host: process.env.host,
+    user: process.env.user,
+    password: process.env.password,
+    database: process.env.database,
+  });
+
+async function query(sql) {
+return new Promise((resolve, reject) => {
+    pool.getConnection((err, connection) => {
+    if (err) {
+        reject(err);
+        return;
     }
-    async function getAllAuthors(req, res){
-        // con.connect(function(err){
-        //     if(err) throw err;
-        //     con.query(`SELECT * FROM author;`, function (err, result, fields){
-        //         if(err) throw err;
-        //         console.log('res:', result)
-        //     })
-        // })
-        res.header("Access-Control-Allow-Origin", "*")
-        // const rows = query('SELECT * FROM books;')
-        const rows = [ { id: 1, firstName: 'J. K.', lastName: 'Rowling' },
-        { id: 2, firstName: 'R. L.', lastName: 'Stein' },
-        { id: 3, firstName: 'J. R. R.', lastName: 'Tolkein' },
-        { id: 4, firstName: 'Nicholas', lastName: 'Sparks' },
-        { id: 5, firstName: 'Stan', lastName: 'Lee' },
-        { id: 6, firstName: 'Trevor', lastName: 'Noah' },
-        { id: 7, firstName: 'Agatha', lastName: 'Christy' }]
-        res.json(rows)
-        return res.status(200)
+    connection.query(sql, (err, result, fields) => {
+        connection.release(); // Release the connection when done
+        if (err) {
+        reject(err);
+        return;
+        }
+        resolve(result);
+    });
+    });
+});
+}
+
+module.exports = (app) => {
+    async function getAllAuthors(req, res) {
+        res.header("Access-Control-Allow-Origin", "*");
+        try {
+          const rows = await query('SELECT * FROM author;');
+          console.log('Rows => ', rows);
+          res.json(rows);
+          return res.status(200);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
     
     async function getAuthor(req, res){
-        const id = 1
         console.log('request ==> ', req.params.id)
-        // const rows = query('SELECT * FROM books;')
-        res.header("Access-Control-Allow-Origin", "*")
-        const rows = [{ id: "1", firstName: "J. K.", lastName: "Rowling" }]
-        res.json(rows)
-        return res.status(200)
+        res.header("Access-Control-Allow-Origin", "*");
+        try {
+          const rows = await query(`SELECT * FROM author WHERE id ="${req.params.id}";`);
+          console.log('Rows => ', rows);
+          res.json(rows);
+          return res.status(200);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
     
     async function createAuthor(req, res){
-        console.log('Create Author', req.query) //Front End connection working
+        console.log('Create Author', req.query)
+        res.header("Access-Control-Allow-Origin", "*");
+    
+        try {
+          const rows = await query(`INSERT INTO author (id, firstName, lastName) VALUES ("${req.query.id}", "${req.query.firstName}", "${req.query.lastName}");`);
+          console.log('Rows => ', rows);
+          res.json(rows);
+          return res.status(200);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
     
     async function editAuthor(req, res){
-        console.log('Update Author', req.query) //Front End connection working
+        console.log('Update Author', req.query)
+        res.header("Access-Control-Allow-Origin", "*");
+    
+        try {
+          const rows = await query(`UPDATE author SET firstName = "${req.query.fname}", lastName = "${req.query.lname}" WHERE id = "${req.query.authId}";`);
+          console.log('Rows => ', rows);
+          res.json(rows);
+          return res.status(200);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+          return res.status(500).json({ error: 'Internal Server Error' });
+        }
     }
     
     return {
